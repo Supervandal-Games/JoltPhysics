@@ -7,16 +7,16 @@
 JPH_NAMESPACE_BEGIN
 
 /// If objects are closer than this distance, they are considered to be colliding (used for GJK) (unit: meter)
-constexpr float cDefaultCollisionTolerance = 1.0e-4f;
+constexpr float cDefaultCollisionTolerance = 1.0e-5f;																// Tuned for 0.1mm objects (was 1.0e-4f)
 
 /// A factor that determines the accuracy of the penetration depth calculation. If the change of the squared distance is less than tolerance * current_penetration_depth^2 the algorithm will terminate. (unit: dimensionless)
-constexpr float cDefaultPenetrationTolerance = 1.0e-4f; ///< Stop when there's less than 1% change
+constexpr float cDefaultPenetrationTolerance = 1.0e-5f;																// Tighter for small objects (was 1.0e-4f)
 
 /// How much padding to add around objects
-constexpr float cDefaultConvexRadius = 0.05f;
+constexpr float cDefaultConvexRadius = 0.0005f;																		// 0.5mm padding (was 0.05f / 50mm)
 
 /// Used by (Tapered)CapsuleShape to determine when supporting face is an edge rather than a point (unit: meter)
-static constexpr float cCapsuleProjectionSlop = 0.02f;
+static constexpr float cCapsuleProjectionSlop = 0.0002f;															// 0.2mm (was 0.02f / 20mm)
 
 /// Maximum amount of jobs to allow
 constexpr int cMaxPhysicsJobs = 2048;
@@ -44,10 +44,10 @@ struct PhysicsSettings
 	/// Radius around objects inside which speculative contact points will be detected. Note that if this is too big
 	/// you will get ghost collisions as speculative contacts are based on the closest points during the collision detection
 	/// step which may not be the actual closest points by the time the two objects hit (unit: meters)
-	float		mSpeculativeContactDistance = 0.02f;
+	float		mSpeculativeContactDistance = 0.0002f;																		// 0.2mm (was 0.02f) — no ghost collisions on tiny objects
 
 	/// How much bodies are allowed to sink into each other (unit: meters)
-	float		mPenetrationSlop = 0.02f;
+	float		mPenetrationSlop = 0.0002f;																					// 0.2mm (was 0.02f) — prevents sinking through tiny objects
 
 	/// Fraction of its inner radius a body must move per step to enable casting for the LinearCast motion quality
 	float		mLinearCastThreshold = 0.75f;
@@ -56,7 +56,7 @@ struct PhysicsSettings
 	float		mLinearCastMaxPenetration = 0.25f;
 
 	/// Max distance to use to determine if two points are on the same plane for determining the contact manifold between two shape faces (unit: meter)
-	float		mManifoldTolerance = 1.0e-3f;
+	float		mManifoldTolerance = 1.0e-4f;																				// 0.1mm (was 1mm) — tighter manifold for small contacts
 
 	/// Maximum distance to correct in a single iteration when solving position constraints (unit: meters)
 	float		mMaxPenetrationDistance = 0.2f;
@@ -71,7 +71,7 @@ struct PhysicsSettings
 	float		mContactNormalCosMaxDeltaRotation = 0.99619469809174553229501040247389f; ///< cos(5 degree)
 
 	/// Maximum allowed distance between old and new contact point to preserve contact forces for warm start (units: meter^2)
-	float		mContactPointPreserveLambdaMaxDistSq = Square(0.01f); ///< 1 cm
+	float		mContactPointPreserveLambdaMaxDistSq = Square(0.001f);														// 1mm² (was 1cm²) — tighter warm start for small contacts
 
 	/// Number of solver velocity iterations to run
 	/// Note that this needs to be >= 2 in order for friction to work (friction is applied using the non-penetration impulse from the previous iteration)
@@ -83,7 +83,7 @@ struct PhysicsSettings
 	/// Minimal velocity needed before a collision can be elastic. If the relative velocity between colliding objects
 	/// in the direction of the contact normal is lower than this, the restitution will be zero regardless of the configured
 	/// value. This lets an object settle sooner. Must be a positive number. (unit: m)
-	float		mMinVelocityForRestitution = 1.0f;
+	float		mMinVelocityForRestitution = 0.01f;																			// KEY FIX: was 1.0f — killed ALL bounces for small/slow objects
 
 	/// Time before object is allowed to go to sleep (unit: seconds)
 	float		mTimeBeforeSleep = 0.5f;
@@ -93,7 +93,7 @@ struct PhysicsSettings
 	/// - The centers of the faces of the bounding box that are furthest away from the center.
 	/// The movement of these points is tracked and if the velocity of all 3 points is lower than this value,
 	/// the object is allowed to go to sleep. Must be a positive number. (unit: m/s)
-	float		mPointVelocitySleepThreshold = 0.03f;
+	float		mPointVelocitySleepThreshold = 0.001f;																		// 1mm/s (was 30mm/s) — tiny objects move slowly, don't sleep too early
 
 	/// By default the simulation is deterministic, it is possible to turn this off by setting this setting to false. This will make the simulation run faster but it will no longer be deterministic.
 	bool		mDeterministicSimulation = true;

@@ -1270,10 +1270,31 @@ void PhysicsSystem::ProcessBodyPair(ContactAllocator &ioContactAllocator, const 
 		// Wake up sleeping bodies
 		BodyID body_ids[2];
 		int num_bodies = 0;
+
+		auto checkWakeUp = [](Body* inActiveBody, Body* inSleepingBody) {
+			float threshold = inSleepingBody->GetMotionProperties() ? inSleepingBody->GetMotionProperties()->GetWakeUpEnergyThreshold() : 0.0f;
+			if (threshold <= 0.0f) return true;
+			
+			float invMass = inActiveBody->IsDynamic() && inActiveBody->GetMotionProperties() ? inActiveBody->GetMotionProperties()->GetInverseMassUnchecked() : 0.0f;
+			if (invMass <= 0.0f) return true; // Infinite mass always wakes it up
+			
+			float mass = 1.0f / invMass;
+			float relSpeedSq = (inActiveBody->GetLinearVelocity() - inSleepingBody->GetLinearVelocity()).LengthSq();
+			float energy = 0.5f * mass * relSpeedSq;
+			return energy >= threshold;
+		};
+
 		if (body1->IsDynamic() && !body1->IsActive())
-			body_ids[num_bodies++] = body1->GetID();
+		{
+			if (!body2->IsActive() || checkWakeUp(body2, body1))
+				body_ids[num_bodies++] = body1->GetID();
+		}
 		if (body2->IsDynamic() && !body2->IsActive())
-			body_ids[num_bodies++] = body2->GetID();
+		{
+			if (!body1->IsActive() || checkWakeUp(body1, body2))
+				body_ids[num_bodies++] = body2->GetID();
+		}
+
 		if (num_bodies > 0)
 			mBodyManager.ActivateBodies(body_ids, num_bodies);
 
@@ -2344,7 +2365,11 @@ void PhysicsSystem::CheckSleepAndUpdateBounds(uint32 inIslandIndex, const Physic
 			body.CalculateWorldSpaceBoundsInternal();
 
 			// Update sleeping
-			all_can_sleep &= int(body.UpdateSleepStateInternal(ioContext->mStepDeltaTime, max_movement, time_before_sleep));
+			float body_max_movement = max_movement;
+			if (body.GetMotionProperties() && body.GetMotionProperties()->GetSleepVelocityThreshold() >= 0.0f)
+				body_max_movement = body.GetMotionProperties()->GetSleepVelocityThreshold() * time_before_sleep;
+
+			all_can_sleep &= int(body.UpdateSleepStateInternal(ioContext->mStepDeltaTime, body_max_movement, time_before_sleep));
 
 			// Reset force and torque
 			MotionProperties *mp = body.GetMotionProperties();
@@ -2354,7 +2379,15 @@ void PhysicsSystem::CheckSleepAndUpdateBounds(uint32 inIslandIndex, const Physic
 
 		// If all bodies indicate they can sleep we can deactivate them
 		if (all_can_sleep == int(ECanSleep::CanSleep))
+		{
+			for (const BodyID *body_id = bodies_begin; body_id < bodies_end; ++body_id)
+			{
+				Body &body = mBodyManager.GetBody(*body_id);
+				if (MotionProperties *mp = body.GetMotionProperties())
+					mp->SetSleepGravity(mGravity);
+			}
 			ioBodiesToSleep.PutToSleep(bodies_begin, bodies_end);
+		}
 	}
 	else
 	{

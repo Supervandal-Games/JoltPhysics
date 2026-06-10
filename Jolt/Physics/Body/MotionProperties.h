@@ -186,6 +186,17 @@ public:
 	void					SetNumPositionStepsOverride(uint inN)							{ JPH_ASSERT(inN < 256); mNumPositionStepsOverride = uint8(inN); }
 	uint					GetNumPositionStepsOverride() const								{ return mNumPositionStepsOverride; }
 
+	/// Custom settings for sleep and wake up
+	float					GetWakeUpEnergyThreshold() const								{ return mWakeUpEnergyThreshold; }
+	void					SetWakeUpEnergyThreshold(float inThreshold)						{ mWakeUpEnergyThreshold = inThreshold; }
+
+	float					GetSleepVelocityThreshold() const								{ return mSleepVelocityThreshold; }
+	void					SetSleepVelocityThreshold(float inThreshold)					{ mSleepVelocityThreshold = inThreshold; }
+
+	/// Get/Set sleep gravity (used for relative gravity wakeup thresholds)
+	const Vec3 &			GetSleepGravity() const											{ return mSleepGravity; }
+	void					SetSleepGravity(const Vec3 &inGravity)							{ mSleepGravity = inGravity; }
+
 	////////////////////////////////////////////////////////////
 	// FUNCTIONS BELOW THIS LINE ARE FOR INTERNAL USE ONLY
 	////////////////////////////////////////////////////////////
@@ -270,6 +281,11 @@ private:
 #endif // JPH_DOUBLE_PRECISION
 	Sphere					mSleepTestSpheres[3];											///< Measure motion for 3 points on the body to see if it is resting: COM, COM + largest bounding box axis, COM + second largest bounding box axis
 	float					mSleepTestTimer;												///< How long this body has been within the movement tolerance
+
+	float					mWakeUpEnergyThreshold = 0.0f;									///< Minimum kinetic energy required for an active body to wake this body upon collision
+	float					mSleepVelocityThreshold = -1.0f;								///< If >= 0, overrides PhysicsSettings::mPointVelocitySleepThreshold
+
+	Vec3					mSleepGravity { 0, 0, 0 };										///< Gravity vector at the time the body went to sleep
 
 #ifdef JPH_ENABLE_ASSERTS
 	EBodyType				mCachedBodyType;												///< Copied from Body::mBodyType and cached for asserting purposes
